@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 from datetime import datetime
+import re
 
 # Configuração da página
 st.set_page_config(
@@ -10,12 +11,53 @@ st.set_page_config(
 )
 
 # Título principal
+
+# Funções auxiliares
+def validar_pubmed_id(texto):
+    """Valida se o texto contém um PubMed ID válido (8 dígitos)"""
+    if not texto:
+        return False
+    padrao = r'\b\d{8}\b'
+    return re.search(padrao, texto) is not None
+
+def extrair_tipo_fonte(texto):
+    """Identifica o tipo de fonte fornecida"""
+    if not texto:
+        return "Texto livre", "📝"
+    if validar_pubmed_id(texto):
+        return "PubMed ID", "🔬"
+    elif texto.startswith('http'):
+        return "URL", "🌐"
+    elif 'doi' in texto.lower():
+        return "DOI", "📄"
+    else:
+        return "Texto livre", "📝"
+
+def gerar_lesoes_comuns():
+    """Retorna lista de lesões desportivas comuns para quick selection"""
+    return [
+        "Entorse do Tornozelo",
+        "Rutura do LCA (Ligamento Cruzado Anterior)",
+        "Tendinite Patelar (Joelho do Saltador)",
+        "Fascite Plantar",
+        "Pubalgia",
+        "Lesão Muscular Isquiotibial",
+        "Síndrome do Impacto no Ombro",
+        "Epicondilite Lateral (Cotovelo do Tenista)",
+        "Fratura de Stress",
+        "Concussão Cerebral"
+    ]
+
 st.title("🏥 Sports Injury AI Studio")
 st.markdown("*Gere infográficos e vídeos profissionais sobre lesões desportivas*")
 
 # Função para gerar estrutura de infográfico
 def gerar_estrutura_infografico(fonte, tema, publico, idioma, nivel_detalhe):
     """Gera estrutura JSON para infográfico"""
+        
+    # Detect tipo de fonte
+    tipo_fonte, emoji = extrair_tipo_fonte(fonte)
+    
     estrutura = {
         "metadata": {
             "titulo": f"Infográfico: {tema}",
@@ -23,6 +65,7 @@ def gerar_estrutura_infografico(fonte, tema, publico, idioma, nivel_detalhe):
             "publico_alvo": publico,
             "idioma": idioma,
             "nivel_detalhe": nivel_detalhe
+                        "tipo_fonte": tipo_fonte,
         },
         "conteudo": {
             "titulo_principal": tema,
