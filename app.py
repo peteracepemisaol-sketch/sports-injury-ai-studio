@@ -65,7 +65,6 @@ def gerar_estrutura_infografico(fonte, tema, publico, idioma, nivel_detalhe):
             "publico_alvo": publico,
             "idioma": idioma,
             "nivel_detalhe": nivel_detalhe
-                        "tipo_fonte": tipo_fonte,
         },
         "conteudo": {
             "titulo_principal": tema,
