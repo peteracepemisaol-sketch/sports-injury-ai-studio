@@ -237,7 +237,8 @@ with tab2:
         fonte_video = st.text_area(
             "Fonte / Tema",
             placeholder="Cole texto, URL, PubMed ID ou descreva o tema da lesão...",
-            height=100
+            height=100,
+            key="fonte_video"
         )
         
         publico_video = st.selectbox(
