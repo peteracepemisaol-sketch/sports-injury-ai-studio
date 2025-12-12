@@ -338,6 +338,26 @@ with tab2:
         else:
             st.warning("⚠️ Por favor, insira a fonte ou tema")
 
+    
+    # Seção de visualização de vídeo integrado
+    st.markdown("---")
+    st.subheader("🎥 Visualizar Vídeo")
+    
+    video_url = st.text_input(
+        "URL do Vídeo",
+        placeholder="Cole URL do YouTube, link direto para MP4, ou caminho de ficheiro local...",
+        help="Suporta YouTube, Vimeo, e links diretos para ficheiros de vídeo",
+        key="video_url_input"
+    )
+    
+    if video_url:
+        try:
+            st.video(video_url)
+            st.caption(f"📍 Fonte: {video_url}")
+        except Exception as e:
+            st.error(f"⚠️ Erro ao carregar vídeo: {str(e)}")
+            st.info("💡 Dica: Certifica-te que o URL é válido e acessível. Para YouTube, usa o formato: https://youtu.be/VIDEO_ID")
+
 # Rodapé
 st.markdown("---")
 st.markdown(
