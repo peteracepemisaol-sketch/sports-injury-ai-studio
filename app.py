@@ -2,6 +2,8 @@ import streamlit as st
 import json
 from datetime import datetime
 import re
+import requests
+from typing import List, Dict, Optional
 
 # Configuração da página
 st.set_page_config(
@@ -9,6 +11,71 @@ st.set_page_config(
     page_icon="🏥",
     layout="wide"
 )
+
+
+# ==== FUNÇÕES DE INTEGRAÇÃO COM APIs ====
+
+def get_api_keys():
+    """Obtém as API keys do Streamlit secrets"""
+    try:
+        return {
+            'newsapi': st.secrets.get('NEWSAPI_KEY', ''),
+            'perplexity': st.secrets.get('PERPLEXITY_API_KEY', ''),
+            'openai': st.secrets.get('OPENAI_API_KEY', '')
+        }
+    except:
+        return {'newsapi': '', 'perplexity': '', 'openai': ''}
+
+def buscar_pubmed(query: str, max_results: int = 5) -> List[Dict]:
+    """Busca artigos no PubMed via API pública - GRATUITO"""
+    try:
+        search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+        search_params = {'db': 'pubmed', 'term': query, 'retmax': max_results, 'retmode': 'json', 'sort': 'relevance'}
+        search_response = requests.get(search_url, params=search_params, timeout=10)
+        search_data = search_response.json()
+        ids = search_data.get('esearchresult', {}).get('idlist', [])
+        if not ids:
+            return []
+        
+        fetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+        fetch_params = {'db': 'pubmed', 'id': ','.join(ids), 'retmode': 'json'}
+        fetch_response = requests.get(fetch_url, params=fetch_params, timeout=10)
+        fetch_data = fetch_response.json()
+        
+        artigos = []
+        for pmid in ids:
+            if pmid in fetch_data.get('result', {}):
+                article = fetch_data['result'][pmid]
+                artigos.append({
+                    'pmid': pmid,
+                    'title': article.get('title', 'N/A'),
+                    'authors': ', '.join([a.get('name', '') for a in article.get('authors', [])[:3]]),
+                    'journal': article.get('source', 'N/A'),
+                    'pubdate': article.get('pubdate', 'N/A'),
+                    'url': f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+                })
+        return artigos
+    except Exception as e:
+        st.error(f"⚠️ Erro ao buscar no PubMed: {str(e)}")
+        return []
+
+def buscar_noticias(query: str, api_key: str, max_results: int = 5) -> List[Dict]:
+    """Busca notícias via NewsAPI"""
+    if not api_key:
+        return []
+    try:
+        url = "https://newsapi.org/v2/everything"
+        params = {'q': query, 'language': 'pt', 'sortBy': 'publishedAt', 'pageSize': max_results, 'apiKey': api_key}
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        if data.get('status') != 'ok':
+            return []
+        return [{'title': article.get('title', 'N/A'), 'source': article.get('source', {}).get('name', 'N/A'),
+                 'description': article.get('description', 'N/A'), 'url': article.get('url', '#'),
+                 'publishedAt': article.get('publishedAt', 'N/A')} for article in data.get('articles', [])]
+    except Exception as e:
+        st.error(f"⚠️ Erro ao buscar notícias: {str(e)}")
+        return []
 
 # Título principal
 
