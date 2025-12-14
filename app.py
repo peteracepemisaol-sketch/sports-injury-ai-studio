@@ -4,6 +4,9 @@ from datetime import datetime
 import re
 import requests
 from typing import List, Dict, Optional
+import time
+from utils.logger import logger, log_api_call, log_error, log_user_action, log_generation
+from utils.rate_limiter import rate_limiter
 
 # Configuração da página
 st.set_page_config(
@@ -15,6 +18,7 @@ st.set_page_config(
 
 # ==== FUNÇÕES DE INTEGRAÇÃO COM APIs ====
 
+@st.cache_data(ttl=3600)
 def get_api_keys():
     """Obtém as API keys do Streamlit secrets"""
     try:
@@ -24,11 +28,19 @@ def get_api_keys():
             'openai': st.secrets.get('OPENAI_API_KEY', '')
         }
     except:
+                log_error('get_api_keys', Exception('Erro ao carregar API keys'))
         return {'newsapi': '', 'perplexity': '', 'openai': ''}
 
+@st.cache_data(ttl=1800)
 def buscar_pubmed(query: str, max_results: int = 5) -> List[Dict]:
     """Busca artigos no PubMed via API pública - GRATUITO"""
     try:
+                # Rate limiting check
+        if not rate_limiter.check_limit('pubmed'):
+            st.warning('⚠️ Muitas requisições. Aguarde um momento.')
+            return []
+        
+        start_time = time.time()
         search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
         search_params = {'db': 'pubmed', 'term': query, 'retmax': max_results, 'retmode': 'json', 'sort': 'relevance'}
         search_response = requests.get(search_url, params=search_params, timeout=10)
@@ -54,27 +66,38 @@ def buscar_pubmed(query: str, max_results: int = 5) -> List[Dict]:
                     'pubdate': article.get('pubdate', 'N/A'),
                     'url': f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
                 })
-        return artigos
+        log_api_call('buscar_pubmed', time.time() - start_time, True, len(artigos))
+                return artigos
     except Exception as e:
         st.error(f"⚠️ Erro ao buscar no PubMed: {str(e)}")
+        log_error('buscar_pubmed', e)
         return []
 
+@st.cache_data(ttl=1800)
 def buscar_noticias(query: str, api_key: str, max_results: int = 5) -> List[Dict]:
     """Busca notícias via NewsAPI"""
     if not api_key:
         return []
     try:
+                # Rate limiting check
+        if not rate_limiter.check_limit('newsapi'):
+            st.warning('⚠️ Muitas requisições. Aguarde um momento.')
+            return []
+        
+        start_time = time.time()
+        
         url = "https://newsapi.org/v2/everything"
         params = {'q': query, 'language': 'pt', 'sortBy': 'publishedAt', 'pageSize': max_results, 'apiKey': api_key}
         response = requests.get(url, params=params, timeout=10)
         data = response.json()
         if data.get('status') != 'ok':
             return []
-        return [{'title': article.get('title', 'N/A'), 'source': article.get('source', {}).get('name', 'N/A'),
-                 'description': article.get('description', 'N/A'), 'url': article.get('url', '#'),
-                 'publishedAt': article.get('publishedAt', 'N/A')} for article in data.get('articles', [])]
-    except Exception as e:
+        noticias = [{'title': article.get('title', 'N/A'), 'source': article.get('source', {}).get('name', ''), 'description': article.get('description', 'N/A'), 'url': article.get('url', ''), 'publishedAt': article.get('publishedAt', 'N/A')} for article in data.get('articles', [])]
+        log_api_call('buscar_noticias', time.time() - start_time, True, len(noticias))
+        return noticias
+        pt Exception as e:
         st.error(f"⚠️ Erro ao buscar notícias: {str(e)}")
+        log_error('buscar_noticias', e)
         return []
 
 # Título principal
