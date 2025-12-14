@@ -95,7 +95,7 @@ def buscar_noticias(query: str, api_key: str, max_results: int = 5) -> List[Dict
         noticias = [{'title': article.get('title', 'N/A'), 'source': article.get('source', {}).get('name', ''), 'description': article.get('description', 'N/A'), 'url': article.get('url', ''), 'publishedAt': article.get('publishedAt', 'N/A')} for article in data.get('articles', [])]
         log_api_call('buscar_noticias', time.time() - start_time, True, len(noticias))
         return noticias
-        pt Exception as e:
+        except Exception as e:
         st.error(f"⚠️ Erro ao buscar notícias: {str(e)}")
         log_error('buscar_noticias', e)
         return []
