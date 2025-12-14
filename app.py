@@ -29,7 +29,7 @@ def get_api_keys():
         }
     except:
                 log_error('get_api_keys', Exception('Erro ao carregar API keys'))
-        return {'newsapi': '', 'perplexity': '', 'openai': ''}
+                return {'newsapi': '', 'perplexity': '', 'openai': ''}
 
 @st.cache_data(ttl=1800)
 def buscar_pubmed(query: str, max_results: int = 5) -> List[Dict]:
