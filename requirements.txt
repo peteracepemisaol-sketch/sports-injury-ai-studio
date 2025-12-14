@@ -1,3 +1,4 @@
 streamlit
 biopython>=1.84
 requests>=2.31.0
+validators==0.22.0
