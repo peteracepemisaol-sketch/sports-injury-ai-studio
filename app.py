@@ -67,7 +67,7 @@ def buscar_pubmed(query: str, max_results: int = 5) -> List[Dict]:
                     'url': f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
                 })
         log_api_call('buscar_pubmed', time.time() - start_time, True, len(artigos))
-                return artigos
+            return artigos
     except Exception as e:
         st.error(f"⚠️ Erro ao buscar no PubMed: {str(e)}")
         log_error('buscar_pubmed', e)
