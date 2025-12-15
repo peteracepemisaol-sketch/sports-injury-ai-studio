@@ -100,6 +100,58 @@ def buscar_noticias(query: str, api_key: str, max_results: int = 5) -> List[Dict
         log_error('buscar_noticias', e)
         return []
 
+    @st.cache_data(ttl=1800)
+def buscar_perplexity(query: str, api_key: str) -> str:
+    """Busca informações sobre lesões desportivas via Perplexity AI"""
+    if not api_key:
+        return ""
+    
+    try:
+        # Rate limiting check
+        if not rate_limiter.check_limit('perplexity'):
+            st.warning('⚠️ Muitas requisições. Aguarde um momento.')
+            return ""
+        
+        start_time = time.time()
+        
+        url = "https://api.perplexity.ai/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "llama-3.1-sonar-small-128k-online",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Você é um especialista em medicina desportiva e fisioterapia. Fornece informações precisas, detalhadas e baseadas em evidência científica sobre lesões desportivas, tratamentos, reabilitação e prevenção."
+                },
+                {
+                    "role": "user",
+                    "content": query
+                }
+            ],
+            "temperature": 0.2,
+            "max_tokens": 1000
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response_data = response.json()
+        
+        if 'choices' in response_data and len(response_data['choices']) > 0:
+            resultado = response_data['choices'][0]['message']['content']
+            log_api_call('buscar_perplexity', time.time() - start_time, True, len(resultado))
+            return resultado
+        else:
+            return ""
+            
+    except Exception as e:
+        st.error(f"⚠️ Erro ao consultar Perplexity AI: {str(e)}")
+        log_error('buscar_perplexity', e)
+        return ""
+
+
 # Título principal
 
 # Funções auxiliares
@@ -301,7 +353,7 @@ def gerar_roteiro_video(fonte, tema, publico, idioma, duracao, tom):
     return roteiro
 
 # Tabs principais
-tab1, tab2 = st.tabs(["📊 Infográfico", "🎬 Vídeo"])
+tab1, tab2 , tab3= st.tabs(["📊 Infográfico", "🎬 Vídeo", "🤖 Perplexity AI"])
 
 # TAB 1: INFOGRÁFICO
 with tab1:
@@ -447,6 +499,62 @@ with tab2:
         except Exception as e:
             st.error(f"⚠️ Erro ao carregar vídeo: {str(e)}")
             st.info("💡 Dica: Certifica-te que o URL é válido e acessível. Para YouTube, usa o formato: https://youtu.be/VIDEO_ID")
+
+            # TAB 3: PERPLEXITY AI
+with tab3:
+    st.header("🤖 Assistente de Pesquisa - Perplexity AI")
+    
+    st.markdown("""
+    Utilize a Perplexity AI para obter informações atualizadas e baseadas em evidência sobre:
+    - Lesões desportivas específicas
+    - Tratamentos e protocolos de reabilitação
+    - Últimas pesquisas e estudos científicos
+    - Prevenção e biomecânica
+    """)
+    
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        query_perplexity = st.text_area(
+            "Pergunta sobre lesões desportivas",
+            placeholder="Ex: Qual é o protocolo mais recente para reabilitação de rutura do LCA em atletas profissionais?",
+            height=120,
+            key="query_perplexity"
+        )
+    
+    with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("**Exemplos:**")
+        if st.button("🦵 Rutura LCA", use_container_width=True):
+            st.session_state.query_perplexity = "Quais são os protocolos mais recentes e baseados em evidência para reabilitação de rutura do ligamento cruzado anterior em atletas profissionais?"
+        if st.button("⚽ Entorse Tornozelo", use_container_width=True):
+            st.session_state.query_perplexity = "Quais são as melhores práticas para tratamento e prevenção de entorses de tornozelo em futebolistas?"
+        if st.button("🏋️ Tendinite Patelar", use_container_width=True):
+            st.session_state.query_perplexity = "Qual é o tratamento mais eficaz para tendinite patelar (joelho do saltador) baseado em evidência científica?"
+    
+    if st.button("🔍 Pesquisar com Perplexity AI", type="primary", use_container_width=True, key="btn_perplexity"):
+        if query_perplexity:
+            api_keys = get_api_keys()
+            perplexity_key = api_keys.get('perplexity', '')
+            
+            if not perplexity_key:
+                st.error("⚠️ API Key da Perplexity não configurada. Configure em Streamlit Secrets.")
+            else:
+                with st.spinner("Consultando Perplexity AI..."):
+                    resultado = buscar_perplexity(query_perplexity, perplexity_key)
+                    
+                    if resultado:
+                        st.success("✅ Pesquisa concluída!")
+                        st.markdown("---")
+                        st.markdown("### 📝 Resposta:")
+                        st.markdown(resultado)
+                        
+                        # Log da ação do usuário
+                        log_user_action('perplexity_search', {'query': query_perplexity[:100]})
+                    else:
+                        st.warning("⚠️ Não foi possível obter resposta da Perplexity AI.")
+        else:
+            st.warning("⚠️ Por favor, insira uma pergunta.")
 
 # Rodapé
 st.markdown("---")
