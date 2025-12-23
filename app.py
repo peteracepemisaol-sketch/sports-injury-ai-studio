@@ -100,7 +100,7 @@ def buscar_noticias(query: str, api_key: str, max_results: int = 5) -> List[Dict
         log_error('buscar_noticias', e)
         return []
 
-    @st.cache_data(ttl=1800)
+@st.cache_data(ttl=1800)
 def buscar_perplexity(query: str, api_key: str) -> str:
     """Busca informações sobre lesões desportivas via Perplexity AI"""
     if not api_key:
