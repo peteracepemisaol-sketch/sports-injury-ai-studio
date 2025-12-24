@@ -5,11 +5,6 @@ import re
 import requests
 from typing import List, Dict, Optional
 import time
-from PIL import Image, ImageDraw, ImageFont
-import tempfile
-import os
-from gtts import gTTS
-import base64
 from utils.logger import logger, log_api_call, log_error, log_user_action, log_generation
 from utils.rate_limiter import rate_limiter
 
@@ -184,8 +179,6 @@ def gerar_lesoes_comuns():
     """Retorna lista de lesões desportivas comuns para quick selection"""
     return [
         "Entorse do Tornozelo",
-        def gerar_video_simples(roteiro: dict, script_enriquecido: str = "") -> str:
-    """
     Gera um vídeo simples com slides de texto e narração por TTS.
     Retorna o caminho do vídeo gerado ou None em caso de erro.
     """
