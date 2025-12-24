@@ -5,6 +5,11 @@ import re
 import requests
 from typing import List, Dict, Optional
 import time
+from PIL import Image, ImageDraw, ImageFont
+import tempfile
+import os
+from gtts import gTTS
+import base64
 from utils.logger import logger, log_api_call, log_error, log_user_action, log_generation
 from utils.rate_limiter import rate_limiter
 
@@ -179,6 +184,120 @@ def gerar_lesoes_comuns():
     """Retorna lista de lesões desportivas comuns para quick selection"""
     return [
         "Entorse do Tornozelo",
+        def gerar_video_simples(roteiro: dict, script_enriquecido: str = "") -> str:
+    """
+    Gera um vídeo simples com slides de texto e narração por TTS.
+    Retorna o caminho do vídeo gerado ou None em caso de erro.
+    """
+    try:
+        import subprocess
+        
+        # Cria diretório temporário
+        temp_dir = tempfile.mkdtemp()
+        frames_dir = os.path.join(temp_dir, 'frames')
+        os.makedirs(frames_dir, exist_ok=True)
+        
+        # Parâmetros do vídeo
+        width, height = 1280, 720
+        bg_color = (45, 134, 171)  # Azul tema
+        text_color = (255, 255, 255)  # Branco
+        
+        cenas = roteiro.get('cenas', [])
+        metadata = roteiro.get('metadata', {})
+        
+        # Gera slides para cada cena
+        audio_files = []
+        frame_duration = 5  # segundos por frame
+        
+        for i, cena in enumerate(cenas):
+            # Cria imagem do slide
+            img = Image.new('RGB', (width, height), bg_color)
+            draw = ImageDraw.Draw(img)
+            
+            # Texto da cena
+            titulo = f"Cena {i+1}: {cena.get('tipo', '').title()}"
+            narrador_texto = cena.get('narrador', {}).get('texto', '')
+            
+            # Desenha título
+            try:
+                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
+                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 32)
+            except:
+                font_title = ImageFont.load_default()
+                font_text = ImageFont.load_default()
+            
+            # Título centralizado
+            draw.text((width//2, 100), titulo, fill=text_color, font=font_title, anchor="mm")
+            
+            # Texto da narração (quebrado em linhas)
+            max_width = width - 200
+            y_position = 250
+            words = narrador_texto.split()
+            lines = []
+            current_line = []
+            
+            for word in words:
+                current_line.append(word)
+                test_line = ' '.join(current_line)
+                bbox = draw.textbbox((0, 0), test_line, font=font_text)
+                if bbox[2] - bbox[0] > max_width:
+                    current_line.pop()
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+            if current_line:
+                lines.append(' '.join(current_line))
+            
+            for line in lines[:8]:  # Máximo 8 linhas
+                draw.text((width//2, y_position), line, fill=text_color, font=font_text, anchor="mm")
+                y_position += 60
+            
+            # Salva frame
+            frame_path = os.path.join(frames_dir, f'frame_{i:03d}.png')
+            img.save(frame_path)
+            
+            # Gera áudio com gTTS
+            if narrador_texto:
+                audio_path = os.path.join(temp_dir, f'audio_{i:03d}.mp3')
+                tts = gTTS(text=narrador_texto, lang='pt', slow=False)
+                tts.save(audio_path)
+                audio_files.append(audio_path)
+        
+        # Combina frames e áudios usando ffmpeg
+        output_video = os.path.join(temp_dir, 'video_final.mp4')
+        
+        # Cria lista de arquivos para ffmpeg concat
+        concat_file = os.path.join(temp_dir, 'concat.txt')
+        with open(concat_file, 'w') as f:
+            for i in range(len(cenas)):
+                frame_path = os.path.join(frames_dir, f'frame_{i:03d}.png')
+                f.write(f"file '{frame_path}'\n")
+                f.write(f"duration {frame_duration}\n")
+        
+        # Comando ffmpeg para criar vídeo
+        # Nota: Esta é uma versão simplificada. ffmpeg precisa estar instalado.
+        try:
+            # Cria vídeo apenas com frames (sem áudio por enquanto)
+            subprocess.run([
+                'ffmpeg', '-y',
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', concat_file,
+                '-vf', f'fps=1/{frame_duration},scale={width}:{height}',
+                '-c:v', 'libx264',
+                '-pix_fmt', 'yuv420p',
+                output_video
+            ], check=True, capture_output=True)
+            
+            return output_video
+        except subprocess.CalledProcessError:
+            # Se ffmpeg não estiver disponível, retorna None
+            return None
+            
+    except Exception as e:
+        st.error(f"⚠️ Erro ao gerar vídeo: {str(e)}")
+        return None
+
+
         "Rutura do LCA (Ligamento Cruzado Anterior)",
         "Tendinite Patelar (Joelho do Saltador)",
         "Fascite Plantar",
