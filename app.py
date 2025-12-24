@@ -477,6 +477,67 @@ with tab2:
                     mime="application/json",
                     key="download_video"
                 )
+
+                    # Botão para gerar conteúdo de vídeo enriquecido com IA
+            if st.button("🤖 Enriquecer Roteiro com IA", type="secondary", use_container_width=True, key="enrich_script"):
+                api_keys = get_api_keys()
+                perplexity_key = api_keys.get('perplexity', '')
+                
+                if not perplexity_key:
+                    st.error("⚠️ API Key da Perplexity não configurada.")
+                else:
+                    with st.spinner("🎨 Gerando conteúdo detalhado para cada cena..."):
+                        # Gera conteúdo detalhado usando Perplexity AI
+                        prompt = f"""Como especialista em fisioterapia desportiva, crie um roteiro de vídeo detalhado sobre {fonte_video}.
+                        
+Para um vídeo de {duracao} segundos direcionado a {publico_video}, com tom {tom}.
+                        
+Forneça:
+                        1. Texto de narração completo para cada cena (5 cenas)
+                        2. Descrições visuais detalhadas
+                        3. Pontos-chave a destacar
+                        4. Sugestões de animações/gráficos
+                        
+Seja preciso, baseado em evidência e adequado ao público."""
+                        
+                        conteudo_ia = buscar_perplexity(prompt, perplexity_key)
+                        
+                        if conteudo_ia:
+                            st.success("✅ Conteúdo gerado com IA!")
+                            st.markdown("### 🎬 Script de Vídeo Enriquecido:")
+                            st.markdown(conteudo_ia)
+                            
+                            # Opção de download do script enriquecido
+                            st.download_button(
+                                label="📝 Download Script Narrado",
+                                data=conteudo_ia,
+                                file_name=f"script_video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                                mime="text/plain",
+                                key="download_script"
+                            )
+
+                                    
+                            # Instruções de uso
+                            st.info("""
+                            🎥 **Como criar o vídeo:**
+                            
+                            1. **Narração por voz (gratuito):**
+                               - ElevenLabs (500 caracteres grátis/mês): elevenlabs.io
+                               - TTSMaker (ilimitado): ttsmaker.com
+                            
+                            2. **Criação de vídeo (gratuito):**
+                               - Canva Video (modelos grátis): canva.com/create/videos
+                               - Clipchamp (Microsoft, gratuito): clipchamp.com
+                               - CapCut (desktop, gratuito): capcut.com
+                            
+                            3. **Workflow sugerido:**
+                               - Use o script narrado para gerar áudio com ElevenLabs/TTSMaker
+                               - Importe o áudio no Canva/Clipchamp
+                               - Adicione imagens/gráficos sugeridos no roteiro
+                               - Exporte o vídeo final
+                            """)
+                        else:
+                            st.warning("⚠️ Não foi possível gerar conteúdo com IA.")
         else:
             st.warning("⚠️ Por favor, insira a fonte ou tema")
 
