@@ -631,8 +631,7 @@ Seja preciso, baseado em evidência e adequado ao público."""
                                     
                             # Instruções de uso
                             st.info("""
-                            🎥 **Como criar o vídeo:**
-                            
+                    **Como criar o video:**                            
                             1. **Narração por voz (gratuito):**
                                - ElevenLabs (500 caracteres grátis/mês): elevenlabs.io
                                - TTSMaker (ilimitado): ttsmaker.com
